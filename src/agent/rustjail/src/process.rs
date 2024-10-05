@@ -17,7 +17,6 @@ use nix::Result;
 
 use oci::Process as OCIProcess;
 use oci_spec::runtime as oci;
-use slog::Logger;
 
 use crate::pipestream::PipeStream;
 use awaitgroup::WaitGroup;
@@ -97,7 +96,6 @@ pub struct Process {
     pub exit_code: i32,
     pub exit_watchers: Vec<Sender<i32>>,
     pub oci: OCIProcess,
-    pub logger: Logger,
     pub term_exit_notifier: Arc<Notify>,
 
     readers: HashMap<StreamType, Reader>,
@@ -130,14 +128,12 @@ impl ProcessOperations for Process {
 
 impl Process {
     pub fn new(
-        logger: &Logger,
         ocip: &OCIProcess,
         id: &str,
         init: bool,
         pipe_size: i32,
         proc_io: Option<ProcessIo>,
     ) -> Result<Self> {
-        let logger = logger.new(o!("subsystem" => "process"));
         let (exit_tx, exit_rx) = tokio::sync::watch::channel(false);
 
         let mut p = Process {
@@ -158,14 +154,13 @@ impl Process {
             exit_code: 0,
             exit_watchers: Vec::new(),
             oci: ocip.clone(),
-            logger: logger.clone(),
             term_exit_notifier: Arc::new(Notify::new()),
             readers: HashMap::new(),
             writers: HashMap::new(),
             proc_io,
         };
 
-        info!(logger, "before create console socket!");
+        info!("before create console socket!");
 
         if !p.tty {
             if cfg!(feature = "standard-oci-runtime") {
@@ -173,7 +168,7 @@ impl Process {
                 p.stdout = Some(std::io::stdout().as_raw_fd());
                 p.stderr = Some(std::io::stderr().as_raw_fd());
             } else {
-                info!(logger, "created console socket!");
+                info!("created console socket!");
 
                 let (stdin, pstdin) = unistd::pipe2(OFlag::O_CLOEXEC)?;
                 p.parent_stdin = Some(pstdin);
@@ -312,14 +307,7 @@ mod tests {
     fn test_process() {
         let id = "abc123rgb";
         let init = true;
-        let process = Process::new(
-            &Logger::root(slog::Discard, o!("source" => "unit-test")),
-            &OCIProcess::default(),
-            id,
-            init,
-            32,
-            None,
-        );
+        let process = Process::new(&OCIProcess::default(), id, init, 32, None);
 
         let mut process = process.unwrap();
         assert_eq!(process.exec_id, id);

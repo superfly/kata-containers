@@ -3445,6 +3445,17 @@ dependencies = [
 
 [[package]]
 name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.6.0",
+ "cfg-if 1.0.0",
+ "libc",
+]
+
+[[package]]
+name = "nix"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
@@ -4942,7 +4953,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "libseccomp",
- "nix 0.24.3",
+ "nix 0.27.1",
  "oci-spec",
  "path-absolutize",
  "protobuf 3.5.1",
@@ -4956,12 +4967,11 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serial_test",
- "slog",
- "slog-scope",
  "tempfile",
  "test-utils",
  "tokio",
  "tokio-vsock 0.3.4",
+ "tracing",
  "xattr 0.2.3",
  "zbus",
 ]

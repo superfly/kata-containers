@@ -17,11 +17,6 @@ use tokio::sync::mpsc::{channel, Receiver};
 
 use crate::pipestream::PipeStream;
 
-// Convenience function to obtain the scope logger.
-fn sl() -> slog::Logger {
-    slog_scope::logger().new(o!("subsystem" => "cgroups_notifier"))
-}
-
 pub async fn notify_oom(cid: &str, cg_dir: String) -> Result<Receiver<String>> {
     if cgroups::hierarchies::is_cgroup2_unified_mode() {
         return notify_on_oom_v2(cid, cg_dir).await;
@@ -37,8 +32,8 @@ pub async fn notify_oom(cid: &str, cg_dir: String) -> Result<Receiver<String>> {
 fn get_value_from_cgroup(path: &Path, key: &str) -> Result<i64> {
     let content = fs::read_to_string(path)?;
     info!(
-        sl(),
-        "get_value_from_cgroup file: {:?}, content: {}", &path, &content
+        "get_value_from_cgroup file: {:?}, content: {}",
+        &path, &content
     );
 
     for line in content.lines() {
@@ -66,12 +61,12 @@ async fn register_memory_event_v2(
     let event_control_path = Path::new(&cg_dir).join(memory_event_name);
     let cgroup_event_control_path = Path::new(&cg_dir).join(cgroup_event_name);
     info!(
-        sl(),
-        "register_memory_event_v2 event_control_path: {:?}", &event_control_path
+        "register_memory_event_v2 event_control_path: {:?}",
+        &event_control_path
     );
     info!(
-        sl(),
-        "register_memory_event_v2 cgroup_event_control_path: {:?}", &cgroup_event_control_path
+        "register_memory_event_v2 cgroup_event_control_path: {:?}",
+        &cgroup_event_control_path
     );
 
     let mut inotify = Inotify::init().context("Failed to initialize inotify")?;
@@ -81,8 +76,8 @@ async fn register_memory_event_v2(
     // Because no `unix.IN_DELETE|unix.IN_DELETE_SELF` event for cgroup file system, so watching all process exited
     let cg_wd = inotify.add_watch(&cgroup_event_control_path, WatchMask::MODIFY)?;
 
-    info!(sl(), "ev_wd: {:?}", ev_wd);
-    info!(sl(), "cg_wd: {:?}", cg_wd);
+    info!("ev_wd: {:?}", ev_wd);
+    info!("cg_wd: {:?}", cg_wd);
 
     let (sender, receiver) = channel(100);
     let containere_id = containere_id.to_string();
@@ -96,17 +91,17 @@ async fn register_memory_event_v2(
         while let Some(event_or_error) = stream.next().await {
             let event = event_or_error.unwrap();
             info!(
-                sl(),
-                "container[{}] get event for container: {:?}", &containere_id, &event
+                "container[{}] get event for container: {:?}",
+                &containere_id, &event
             );
             // info!("is1: {}", event.wd == wd1);
-            info!(sl(), "event.wd: {:?}", event.wd);
+            info!("event.wd: {:?}", event.wd);
 
             if event.wd == ev_wd {
                 let oom = get_value_from_cgroup(&event_control_path, "oom_kill");
                 if oom.unwrap_or(0) > 0 {
                     let _ = sender.send(containere_id.clone()).await.map_err(|e| {
-                        error!(sl(), "send containere_id failed, error: {:?}", e);
+                        error!("send containere_id failed, error: {:?}", e);
                     });
                     return;
                 }
@@ -147,7 +142,8 @@ async fn register_memory_event(
     let path = Path::new(&cg_dir).join(event_name);
     let event_file = File::open(path.clone())?;
 
-    let eventfd = eventfd(0, EfdFlags::EFD_CLOEXEC)?;
+    let owned_eventfd = eventfd(0, EfdFlags::EFD_CLOEXEC)?;
+    let eventfd = owned_eventfd.as_raw_fd();
 
     let event_control_path = Path::new(&cg_dir).join("cgroup.event_control");
 
@@ -169,7 +165,7 @@ async fn register_memory_event(
             let mut buf = [0u8; 8];
             match eventfd_stream.read(&mut buf).await {
                 Err(err) => {
-                    warn!(sl(), "failed to read from eventfd: {:?}", err);
+                    warn!("failed to read from eventfd: {:?}", err);
                     return;
                 }
                 Ok(_) => {
@@ -192,7 +188,7 @@ async fn register_memory_event(
             }
 
             let _ = sender.send(containere_id.clone()).await.map_err(|e| {
-                error!(sl(), "send containere_id failed, error: {:?}", e);
+                error!("send containere_id failed, error: {:?}", e);
             });
         }
     });
