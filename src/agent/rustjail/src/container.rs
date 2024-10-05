@@ -975,10 +975,12 @@ impl BaseContainer for LinuxContainer {
         info!("enter container.start!");
         let mut fifofd: RawFd = -1;
         if p.init {
-            if stat::stat(fifo_file.as_str()).is_ok() {
-                return Err(anyhow!("exec fifo exists"));
+            if stat::stat(fifo_file.as_str()).is_err() {
+                // return Err(anyhow!("exec fifo exists"));
+                debug!("exec fifo does not exist, creating...");
+                unistd::mkfifo(fifo_file.as_str(), Mode::from_bits(0o644).unwrap())
+                    .context("could not create exec fifo")?;
             }
-            unistd::mkfifo(fifo_file.as_str(), Mode::from_bits(0o644).unwrap())?;
 
             fifofd = fcntl::open(
                 fifo_file.as_str(),
