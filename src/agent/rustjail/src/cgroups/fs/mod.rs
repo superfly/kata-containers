@@ -83,8 +83,7 @@ impl CgroupManager for Manager {
 
     fn set(&self, r: &LinuxResources, update: bool) -> Result<()> {
         info!(
-            
-            "cgroup manager set resources for container. Resources input {:?}", r
+            "cgroup manager (v2? {}) set resources for container. Resources input {:?}", self.cgroup.v2(), r
         );
 
         let res = &mut cgroups::Resources::default();
@@ -127,7 +126,6 @@ impl CgroupManager for Manager {
             }
         }
         debug!(
-            
             "Resources after processed, pod_res = {:?}, res = {:?}", pod_res, res
         );
 
